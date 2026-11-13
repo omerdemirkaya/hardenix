@@ -34,6 +34,16 @@ def read_sysctl(ctx: Context, key: str):
     return None if text is None else text.strip()
 
 
+def _suid_dumpable_safe(ctx: Context, key: str, value: str) -> bool:
+    """fs.suid_dumpable=2 ("suidsafe") is safe when core dumps go to a pipe handler or an
+    absolute path - the kernel refuses mode 2 otherwise. Ubuntu's apport sets exactly this
+    on purpose, so flagging it would be a false alarm (and the value is reset at boot)."""
+    if key != "fs.suid_dumpable" or value != "2":
+        return False
+    pattern = read_sysctl(ctx, "kernel.core_pattern") or ""
+    return pattern.startswith("|") or pattern.startswith("/")
+
+
 @check("SYS-001", "Kernel hardening (sysctl)", "kernel")
 def sysctl(ctx: Context) -> Iterator[Finding]:
     good = 0
@@ -41,7 +51,7 @@ def sysctl(ctx: Context) -> Iterator[Finding]:
         value = read_sysctl(ctx, key)
         if value is None:
             continue
-        if value in accepted:
+        if value in accepted or _suid_dumpable_safe(ctx, key, value):
             good += 1
             continue
         yield failed(sev, "%s = %s (recommended %s: %s)" % (key, value, recommended, why), id="SYS-001:%s" % key,

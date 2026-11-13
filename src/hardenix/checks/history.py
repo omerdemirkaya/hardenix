@@ -50,6 +50,17 @@ MASK = "****"
 MAX_SHOWN_LINE = 140
 
 
+# A "secret" that starts like this is almost always a regex, a shell expansion or a
+# placeholder, e.g. grep -oP 'KEY = "\K[^"]+', sed "s|^SECRET=.*|...|", TOKEN=$(cat f), PASS=<pass>.
+_EXPRESSION_START = (".", "\\", "[", "(", "*", "^", "<", "{", "$")
+
+
+def looks_like_expression(value: str) -> bool:
+    v = value.strip("'\"")
+    return (not v or v.startswith(_EXPRESSION_START) or "$(" in v or "${" in v
+            or set(v) <= set("*x.-_"))
+
+
 def scan_line(line: str) -> Tuple[List[str], str]:
     """Return (pattern names that matched, line with every secret masked)."""
     names: List[str] = []
@@ -57,7 +68,7 @@ def scan_line(line: str) -> Tuple[List[str], str]:
     for name, regex, group in PATTERNS:
         for m in regex.finditer(line):
             start, end = m.span(group)
-            if end > start:
+            if end > start and not looks_like_expression(line[start:end]):
                 names.append(name)
                 spans.append((start, end))
     if not spans:

@@ -96,7 +96,12 @@ def test_scan_line_patterns():
         names, masked = scan_line(line)
         assert names, line
         assert secret not in masked, line
-    for clean in ("ls -la", "mysql -u root -p", "git push", "echo $PASSWORD", "ssh -p 2222 host"):
+    for clean in ("ls -la", "mysql -u root -p", "git push", "echo $PASSWORD", "ssh -p 2222 host",
+                  # regexes, shell expansions and placeholders seen on real servers:
+                  """KEY=$(grep -oP 'GEMINI_API_KEY = "\\K[^"]+' legacy/gen.py)""",
+                  'sed -e "s|^JWT_SECRET=.*|JWT_SECRET=$JWT|" .env.example > .env',
+                  "export API_TOKEN=$(cat /run/secrets/token)", "DB_PASSWORD=<password> ./run.sh",
+                  "export SECRET_KEY=${SECRET_KEY:-x}", "PASSWORD=****"):
         assert scan_line(clean)[0] == [], clean
 
 
@@ -120,3 +125,15 @@ def test_broken_check_does_not_stop_audit(ctx, monkeypatch):
     findings = runner.run_checks(ctx)
     assert by_id(findings, "X-1")[0].status == Status.ERROR
     assert len(findings) > 5
+
+
+def test_suid_dumpable_2_ok_with_apport_pipe(ctx, fakeroot):
+    write(fakeroot, "/proc/sys/fs/suid_dumpable", "2\n")
+    write(fakeroot, "/proc/sys/kernel/core_pattern", "|/usr/share/apport/apport -p%p -s%s -c%c\n")
+    assert not by_id(run_checks(ctx, ["SYS-001"]), "SYS-001:fs.suid_dumpable")
+
+
+def test_suid_dumpable_2_flagged_with_plain_core_pattern(ctx, fakeroot):
+    write(fakeroot, "/proc/sys/fs/suid_dumpable", "2\n")
+    write(fakeroot, "/proc/sys/kernel/core_pattern", "core\n")
+    assert by_id(run_checks(ctx, ["SYS-001"]), "SYS-001:fs.suid_dumpable")

@@ -24,15 +24,32 @@ def _hostname(ctx: Context) -> str:
     return (ctx.read_text("/etc/hostname") or ctx.root).strip()
 
 
+def _discard_typeahead() -> None:
+    """Throw away input typed or pasted before the question was shown, so a pasted
+    next command is never taken as the answer."""
+    try:
+        import termios
+
+        termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
+    except (ImportError, OSError, ValueError):
+        pass
+
+
 def _ask(question: str, default: bool = False) -> bool:
     suffix = " [Y/n] " if default else " [y/N] "
-    try:
-        answer = input(question + suffix).strip().lower()
-    except EOFError:
-        return False
-    if not answer:
-        return default
-    return answer in ("y", "yes")
+    _discard_typeahead()
+    while True:
+        try:
+            answer = input(question + suffix).strip().lower()
+        except EOFError:
+            return False
+        if not answer:
+            return default
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("n", "no"):
+            return False
+        print("Please answer 'y' or 'n'.")
 
 
 def _interactive() -> bool:
