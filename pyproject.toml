@@ -7,10 +7,10 @@ name = "hardenix"
 dynamic = ["version"]
 description = "Offline security audit and safe, reversible hardening for Debian and Ubuntu servers"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
-authors = [{ name = "hardenix contributors" }]
+authors = [{ name = "Ömer Demirkaya" }]
 keywords = ["security", "hardening", "audit", "linux", "ubuntu", "debian", "ssh", "server"]
 # hardenix deliberately has no third-party runtime dependencies (supply-chain safety).
 dependencies = []

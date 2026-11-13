@@ -36,7 +36,7 @@ pipx install hardenix
 (On current Debian/Ubuntu releases, a plain `sudo pip install` is blocked by the system on purpose; `pipx`
 installs the tool into its own isolated environment. `pip install hardenix` inside a virtualenv also works.)
 
-Requirements: Python 3.9+, Debian 11+ or Ubuntu 22.04+. **No other dependencies.**
+Requirements: Python 3.10+, Debian 12+ or Ubuntu 22.04+. **No other dependencies.**
 
 ## Usage
 
